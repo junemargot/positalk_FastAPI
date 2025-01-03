@@ -38,7 +38,7 @@ class HuggingFaceHandler:
         self.emojis = ['💕', '✨', '🥺', '😊', '💝', '🌸', '💗', '💖']
         
         # 추론 타임아웃 설정 (초)
-        self.inference_timeout = 120   # 추론 타임아웃을 60초로 설정
+        self.inference_timeout = 300   # 추론 타임아웃을 60초로 설정
 
     async def get_completion(self, message: str, style: str) -> Optional[str]:
         if not self.model_loaded:
