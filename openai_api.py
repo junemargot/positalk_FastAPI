@@ -1,5 +1,9 @@
 from openai import OpenAI
 import os
+from dotenv import load_dotenv
+
+# .env 파일 로드
+load_dotenv()
 
 class OpenAIHandler:
     def __init__(self):
@@ -18,6 +22,9 @@ class OpenAIHandler:
             'polite': "매우 공손하고 예의바른 어투로 변환해주세요.",
             'cute': "귀엽고 애교있는 어투로 변환해주세요."
         }
+
+        if style not in style_instructions:
+            raise ValueError("올바른 스타일을 선택해주세요.")
 
         messages = [
             {"role": "system", "content": self.base_prompt},
