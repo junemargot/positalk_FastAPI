@@ -3,6 +3,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import random
 import asyncio
 from typing import Optional
+import concurrent.futures
 
 class HuggingFaceHandler:
     def __init__(self):
@@ -37,7 +38,7 @@ class HuggingFaceHandler:
         self.emojis = ['💕', '✨', '🥺', '😊', '💝', '🌸', '💗', '💖']
         
         # 추론 타임아웃 설정 (초)
-        self.inference_timeout = 30   # 추론 타임아웃을 60초로 설정
+        self.inference_timeout = 300   # 60초로 수정
 
     async def get_completion(self, message: str, style: str) -> Optional[str]:
         if not self.model_loaded:
@@ -69,14 +70,15 @@ class HuggingFaceHandler:
                 max_length=512
             ).to(self.model.device)
 
-            # 추론 시간만 타임아웃 적용
-            print("[처리] 추론 시작...")
+            # token_type_ids 제거
+            if 'token_type_ids' in inputs:
+                del inputs['token_type_ids']
+
             outputs = await asyncio.wait_for(
                 asyncio.get_event_loop().run_in_executor(
                     None,
                     lambda: self.model.generate(
-                        input_ids=inputs['input_ids'],
-                        attention_mask=inputs['attention_mask'],
+                        **inputs,
                         max_new_tokens=32,
                         temperature=0.7,
                         do_sample=True
@@ -84,7 +86,6 @@ class HuggingFaceHandler:
                 ),
                 timeout=self.inference_timeout
             )
-            print("[처리] 추론 완료")
 
             response = self.tokenizer.decode(
                 outputs[0][inputs.input_ids.shape[1]:],
@@ -104,3 +105,15 @@ class HuggingFaceHandler:
         except Exception as e:
             print(f"[에러] HuggingFace 모델 오류: {e}")
             return None
+    def _generate_response(self, message: str, style: str) -> str:
+        # 기존의 동기 처리 코드를 여기로 이동
+        if style == 'cute':
+            prompt = f"""다음 문장을 귀엽고 발랄한 말투로 변환해주세요...."""
+        else:
+            prompt = f"""다음 문장을 변환해주세요...."""
+        
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
+        outputs = self.model.generate(**inputs)
+        response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        
+        return response
