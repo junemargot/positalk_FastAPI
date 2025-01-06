@@ -72,7 +72,7 @@ async def chat(request: ChatRequest):
                 request.message,
                 request.style
             )
-        elif request.model == "huggingface":  # polyglot-ko
+        elif request.model == "polyglot-ko":  # polyglot-ko
             response = await polyglot_handler.get_completion(
                 request.message,
                 request.style
