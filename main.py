@@ -1,7 +1,7 @@
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any
@@ -41,30 +41,32 @@ class ChatRequest(BaseModel):
     message: str
     style: str
     model: str
+    subModel: str = 'gpt-3.5-turbo'  # 기본값 설정
 
 class TTSRequest(BaseModel):
     text: str
     voice: Dict[str, Any]
 
 @app.post("/api/chat")
-async def chat_endpoint(request: ChatRequest):
+async def chat(request: ChatRequest):
     try:
-        if request.model == 'openai-gpt':
-            response = openai_handler.get_completion(request.message, request.style)
-            return {"response": response if response else "OpenAI 처리 중 오류가 발생했습니다."}
-        # elif request.model == 'deepseek':  # 주석 처리
-        #     response = deepseek_handler.get_completion(request.message, request.style)
-        #     return {"response": response if response else "Deepseek 처리 중 오류가 발생했습니다."}
-        elif request.model == 'gemini':
-            response = gemini_handler.get_completion(request.message, request.style)
-            return {"response": response if response else "Gemini 처리 중 오류가 발생했습니다."}
-        elif request.model == 'huggingface':
-            response = await huggingface_handler.get_completion(request.message, request.style)
-            return {"response": response if response else "HuggingFace 처리 중 오류가 발생했습니다."}
-        else:
-            return {"error": "지원하지 않는 모델입니다."}
+        print(f"요청 데이터: {request}")  # 디버깅용
+        
+        if request.model == "openai-gpt":
+            response = await openai_handler.get_completion(
+                request.message, 
+                request.style,
+                request.subModel
+            )
+            
+            if response is None:
+                raise HTTPException(status_code=500, detail="응답 생성 실패")
+                
+            return {"response": response}
+            
     except Exception as e:
-        return {"error": str(e)}
+        print(f"서버 에러: {str(e)}")  # 디버깅용
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/tts")
 async def tts_endpoint(request: TTSRequest):
