@@ -46,21 +46,51 @@ class HuggingFaceHandler:
             return None
             
         try:
-            if style == 'cute':
-                prompt = f"""다음 문장을 귀엽고 발랄한 말투로 변환해주세요.
+            # 스타일별 프롬프트 정의
+            style_prompts = {
+                'formal': f"""다음 문장을 격식있고 공적인 말투로 변환해주세요.
+
+                규칙:
+                1. '-습니다', '-입니다' 등의 격식체 사용
+                2. 정중하고 예의바른 톤 유지
+                3. 불필요한 존댓말은 제외
+                
+                입력: "{message}"
+                출력:""",
+                
+                'casual': f"""다음 문장을 친근하고 편안한 말투로 변환해주세요.
+
+                규칙:
+                1. '-야', '-어' 등의 반말 사용
+                2. 자연스럽고 일상적인 표현 사용
+                3. 너무 격식없지 않게 유지
+                
+                입력: "{message}"
+                출력:""",
+                
+                'polite': f"""다음 문장을 매우 공손하고 예의바른 말투로 변환해주세요.
+
+                규칙:
+                1. '-시옵니다', '-드립니다' 등 최상급 존댓말 사용
+                2. 겸손하고 정중한 표현 사용
+                3. 상대방을 최대한 존중하는 어조
+                
+                입력: "{message}"
+                출력:""",
+                
+                'cute': f"""다음 문장을 귀엽고 발랄한 말투로 변환해주세요.
 
                 규칙:
                 1. "~용", "~얏", "~냥" 같은 귀여운 어미 사용하기
                 2. 밝고 긍정적인 톤으로 변환하기
                 3. 짧고 간단하게 변환하기
                 4. 문장 끝에는 느낌표나 물음표 사용하기
+                
+                입력: "{message}"
+                출력:"""
+            }
 
-                입력: "{message}"
-                출력:"""
-            else:
-                prompt = f"""다음 문장을 변환해주세요.
-                입력: "{message}"
-                출력:"""
+            prompt = style_prompts.get(style, style_prompts['casual'])  # 기본값은 친근체
 
             inputs = self.tokenizer(
                 prompt, 
@@ -70,7 +100,6 @@ class HuggingFaceHandler:
                 max_length=512
             ).to(self.model.device)
 
-            # token_type_ids 제거
             if 'token_type_ids' in inputs:
                 del inputs['token_type_ids']
 
@@ -79,9 +108,11 @@ class HuggingFaceHandler:
                     None,
                     lambda: self.model.generate(
                         **inputs,
-                        max_new_tokens=32,
+                        max_new_tokens=64,  # 출력 길이 증가
                         temperature=0.7,
-                        do_sample=True
+                        do_sample=True,
+                        top_p=0.9,
+                        repetition_penalty=1.2  # 반복 방지
                     )
                 ),
                 timeout=self.inference_timeout
@@ -92,6 +123,7 @@ class HuggingFaceHandler:
                 skip_special_tokens=True
             ).strip()
 
+            # cute 스타일일 때만 이모지 추가
             if style == 'cute':
                 emoji_count = random.randint(1, 2)
                 selected_emojis = ' ' + ''.join(random.sample(self.emojis, emoji_count))

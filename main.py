@@ -1,10 +1,14 @@
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
+
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any
-import os
 from dotenv import load_dotenv
 from openai_api import OpenAIHandler
+# from deepseek_api import DeepSeekAIHandler  # 주석 처리
+from gemini_api import GeminiHandler
 from huggingface_api import HuggingFaceHandler
 from tts_handler import TTSHandler
 
@@ -16,18 +20,22 @@ app = FastAPI()
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # React 개발 서버 주소
+    allow_origins=["*"],  # 개발 중에는 모든 origin 허용
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# OpenAI와 TTS 핸들러 초기화
+# 핸들러 초기화
 openai_handler = OpenAIHandler()
+try:
+    # deepseek_handler = DeepSeekAIHandler()  # 주석 처리
+    gemini_handler = GeminiHandler()
+except Exception as e:
+    print(f"모델 초기화 중 에러 발생: {e}")
+    raise
+huggingface_handler = HuggingFaceHandler()
 tts_handler = TTSHandler()
-
-# HuggingFace 핸들러는 지연 초기화
-huggingface_handler = None
 
 class ChatRequest(BaseModel):
     message: str
@@ -41,15 +49,20 @@ class TTSRequest(BaseModel):
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
     try:
-        if request.model == 'openai':
+        if request.model == 'openai-gpt':
             response = openai_handler.get_completion(request.message, request.style)
             return {"response": response if response else "OpenAI 처리 중 오류가 발생했습니다."}
-        else:  # huggingface
-            global huggingface_handler
-            if huggingface_handler is None:
-                huggingface_handler = HuggingFaceHandler()
+        # elif request.model == 'deepseek':  # 주석 처리
+        #     response = deepseek_handler.get_completion(request.message, request.style)
+        #     return {"response": response if response else "Deepseek 처리 중 오류가 발생했습니다."}
+        elif request.model == 'gemini':
+            response = gemini_handler.get_completion(request.message, request.style)
+            return {"response": response if response else "Gemini 처리 중 오류가 발생했습니다."}
+        elif request.model == 'huggingface':
             response = await huggingface_handler.get_completion(request.message, request.style)
             return {"response": response if response else "HuggingFace 처리 중 오류가 발생했습니다."}
+        else:
+            return {"error": "지원하지 않는 모델입니다."}
     except Exception as e:
         return {"error": str(e)}
 
