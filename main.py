@@ -58,14 +58,26 @@ async def chat(request: ChatRequest):
                 request.style,
                 request.subModel
             )
+        elif request.model == "gemini":  # Gemini 처리 추가
+            response = gemini_handler.get_completion(
+                request.message,
+                request.style
+            )
+        elif request.model == "huggingface":
+            response = await huggingface_handler.get_completion(
+                request.message,
+                request.style
+            )
+        else:
+            raise HTTPException(status_code=400, detail="지원하지 않는 모델입니다.")
             
-            if response is None:
-                raise HTTPException(status_code=500, detail="응답 생성 실패")
+        if response is None:
+            raise HTTPException(status_code=500, detail="응답 생성 실패")
                 
-            return {"response": response}
+        return {"response": response}
             
     except Exception as e:
-        print(f"서버 에러: {str(e)}")  # 디버깅용
+        print(f"서버 에러: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/tts")
