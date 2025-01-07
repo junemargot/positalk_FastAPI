@@ -28,7 +28,9 @@ def init_pipeline():
 def convert(text):
     num_return_sequences = 1
     max_length = 60
-    return gentle_pipeline(text, num_return_sequences = num_return_sequences, max_length = max_length)
+    output = gentle_pipeline(text, num_return_sequences=num_return_sequences, max_length=max_length)
+    # 생성된 텍스트만 반환
+    return output[0]['generated_text']
 
 if __name__ == "__main__":
     init_pipeline()

@@ -14,6 +14,9 @@ from qwen_1_5_1_8b import TestHandler as Qwen18BHandler
 from qwen_2_5_1_5b_instruct import HuggingFaceHandler as Qwen15BHandler
 from qwen_2_5_7b_instruct import HuggingFaceHandler as Qwen7BHandler
 import text_style_converter_qwen25_3b_instruct as qwen3b
+import heegyu
+import formal_9unu
+import gentle_9unu
 from tts_handler import TTSHandler
 
 # 환경변수 로드
@@ -73,6 +76,8 @@ async def get_handler(model_name: str):
         elif model_name == "qwen3b":
             qwen3b.init_pipeline()
             current_handler = qwen3b
+        elif model_name == "h9":
+            return None
         else:
             raise ValueError(f"지원하지 않는 모델: {model_name}")
         
@@ -118,6 +123,21 @@ async def chat(request: ChatRequest):
                 request.message,
                 request.style
             )
+        elif request.model == "h9":
+            # 스타일에 따라 다른 모듈 사용
+            if request.style == 'formal':
+                formal_9unu.init_pipeline()
+                response = formal_9unu.convert(request.message)
+            elif request.style == 'gentle':
+                gentle_9unu.init_pipeline()
+                response = gentle_9unu.convert(request.message)
+            else:
+                heegyu.init_pipeline()
+                # heegyu 모듈 사용
+                response = heegyu.transfer_text_style(
+                    text=request.message,
+                    target_style=request.style
+                )
         else:
             response = await handler.get_completion(
                 request.message,

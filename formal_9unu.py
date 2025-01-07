@@ -28,7 +28,9 @@ def init_pipeline():
 def convert(text):
     num_return_sequences = 1
     max_length = 60
-    return formal_pipeline(text, num_return_sequences=num_return_sequences, max_length=max_length)
+    output = formal_pipeline(text, num_return_sequences=num_return_sequences, max_length=max_length)
+    # 생성된 텍스트만 반환
+    return output[0]['generated_text']
 
 if __name__ == "__main__":
     init_pipeline()
@@ -37,4 +39,4 @@ if __name__ == "__main__":
     text = input("입력문장: ")
     out = convert(text)
 
-    print(f"변환결과: {[x['generated_text'] for x in out]}")
+    print(f"변환결과: {out}")
