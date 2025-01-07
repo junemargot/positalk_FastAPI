@@ -79,6 +79,9 @@ async def get_handler(model_name: str):
             current_handler = qwen3b
         elif model_name == "bllossom":
             current_handler = BllossomHandler()
+        elif model_name == "heegyu":
+            heegyu.init_pipeline()
+            current_handler = heegyu
         elif model_name == "h9":
             return None
         else:
@@ -126,6 +129,11 @@ async def chat(request: ChatRequest):
                 request.message,
                 request.style
             )
+        elif request.model == "heegyu":
+            response = handler.transfer_text_style(
+                text=request.message,
+                target_style=request.style
+            )
         elif request.model == "h9":
             # 스타일에 따라 다른 모듈 사용
             if request.style == 'formal':
@@ -136,7 +144,6 @@ async def chat(request: ChatRequest):
                 response = gentle_9unu.convert(request.message)
             else:
                 heegyu.init_pipeline()
-                # heegyu 모듈 사용
                 response = heegyu.transfer_text_style(
                     text=request.message,
                     target_style=request.style
