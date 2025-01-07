@@ -30,19 +30,59 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 핸들러 초기화
-openai_handler = OpenAIHandler()
-try:
-    gemini_handler = GeminiHandler()
-    polyglot_handler = PolyglotKoHandler()
-    kogpt2_handler = KoGPT2Handler()
-    qwen18b_handler = Qwen18BHandler()
-    qwen15b_handler = Qwen15BHandler()
-    qwen7b_handler = Qwen7BHandler()
-    qwen3b.init_pipeline()  # Qwen 3B 초기화
-except Exception as e:
-    print(f"모델 초기화 중 에러 발생: {e}")
-    raise
+# 전역 변수로 현재 로드된 핸들러와 모델 이름 저장
+current_handler = None
+current_model = None
+
+async def cleanup_unused_handlers():
+    """이전 핸들러를 메모리에서 해제하는 함수"""
+    global current_handler, current_model
+    
+    if current_handler is not None:
+        print(f"이전 모델 제거: {current_model}")
+        current_handler = None
+        current_model = None
+
+async def get_handler(model_name: str):
+    """필요할 때만 핸들러를 초기화하고 반환하는 함수"""
+    global current_handler, current_model
+    
+    # 같은 모델을 요청한 경우 기존 핸들러 재사용
+    if current_model == model_name and current_handler is not None:
+        return current_handler
+    
+    # 다른 모델 요청 시 이전 핸들러 정리
+    await cleanup_unused_handlers()
+    
+    try:
+        # 새로운 핸들러 초기화
+        if model_name == "openai-gpt":
+            current_handler = OpenAIHandler()
+        elif model_name == "gemini":
+            current_handler = GeminiHandler()
+        elif model_name == "polyglot-ko":
+            current_handler = PolyglotKoHandler()
+        elif model_name == "kogpt2":
+            current_handler = KoGPT2Handler()
+        elif model_name == "qwen18b":
+            current_handler = Qwen18BHandler()
+        elif model_name == "qwen15b":
+            current_handler = Qwen15BHandler()
+        elif model_name == "qwen7b":
+            current_handler = Qwen7BHandler()
+        elif model_name == "qwen3b":
+            qwen3b.init_pipeline()
+            current_handler = qwen3b
+        else:
+            raise ValueError(f"지원하지 않는 모델: {model_name}")
+        
+        current_model = model_name
+        print(f"새로운 모델 로드: {model_name}")
+        return current_handler
+        
+    except Exception as e:
+        print(f"핸들러 초기화 중 에러 발생: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 tts_handler = TTSHandler()
 
@@ -61,46 +101,28 @@ async def chat(request: ChatRequest):
     try:
         print(f"요청 데이터: {request}")
         
-        if request.model == "openai-gpt":
-            response = await openai_handler.get_completion(
+        # 요청된 모델의 핸들러 가져오기
+        handler = await get_handler(request.model)
+        
+        # 모델별 응답 생성
+        if request.model == "qwen3b":
+            response = handler.convert_style(request.message, request.style)
+        elif request.model == "openai-gpt":
+            response = await handler.get_completion(
                 request.message, 
                 request.style,
                 request.subModel
             )
         elif request.model == "gemini":
-            response = gemini_handler.get_completion(
+            response = handler.get_completion(
                 request.message,
                 request.style
             )
-        elif request.model == "polyglot-ko":  # polyglot-ko
-            response = await polyglot_handler.get_completion(
-                request.message,
-                request.style
-            )
-        elif request.model == "kogpt2":
-            response = await kogpt2_handler.get_completion(
-                request.message,
-                request.style
-            )
-        elif request.model == "qwen18b":
-            response = await qwen18b_handler.get_completion(
-                request.message,
-                request.style
-            )
-        elif request.model == "qwen15b":
-            response = await qwen15b_handler.get_completion(
-                request.message,
-                request.style
-            )
-        elif request.model == "qwen7b":
-            response = await qwen7b_handler.get_completion(
-                request.message,
-                request.style
-            )
-        elif request.model == "qwen3b":
-            response = qwen3b.convert_style(request.message, request.style)
         else:
-            raise HTTPException(status_code=400, detail="지원하지 않는 모델입니다.")
+            response = await handler.get_completion(
+                request.message,
+                request.style
+            )
             
         if response is None:
             raise HTTPException(status_code=500, detail="응답 생성 실패")
