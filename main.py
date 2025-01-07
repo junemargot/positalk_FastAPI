@@ -13,6 +13,7 @@ from kogpt2_handler import KoGPT2Handler
 from qwen_1_5_1_8b import TestHandler as Qwen18BHandler
 from qwen_2_5_1_5b_instruct import HuggingFaceHandler as Qwen15BHandler
 from qwen_2_5_7b_instruct import HuggingFaceHandler as Qwen7BHandler
+from bllossom_handler import BllossomHandler
 import text_style_converter_qwen25_3b_instruct as qwen3b
 import heegyu
 import formal_9unu
@@ -76,6 +77,8 @@ async def get_handler(model_name: str):
         elif model_name == "qwen3b":
             qwen3b.init_pipeline()
             current_handler = qwen3b
+        elif model_name == "bllossom":
+            current_handler = BllossomHandler()
         elif model_name == "h9":
             return None
         else:
