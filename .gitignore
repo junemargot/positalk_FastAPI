@@ -1,5 +1,6 @@
 # Environment variables
 .env
+.history/
 
 # Python
 __pycache__/
