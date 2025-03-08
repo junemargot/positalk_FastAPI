@@ -7,7 +7,7 @@ load_dotenv()
 class GeminiHandler:
     def __init__(self):
         genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-        self.model = genai.GenerativeModel('gemini-pro')
+        self.model = genai.GenerativeModel('gemini-1.5-pro')
         self.base_prompt = """
         당신은 문장 변환 전문가입니다.
         주어진 문장을 지정된 스타일로 변환해주세요.

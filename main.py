@@ -101,7 +101,7 @@ class ChatRequest(BaseModel):
     message: str
     style: str
     model: str
-    subModel: str = 'gpt-3.5-turbo'
+    subModel: str = 'gpt-4o-mini'
 
 class TTSRequest(BaseModel):
     text: str
